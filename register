@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+import docker
+import etcd
+import argparse
+import signal
+import time
+import sys
+
+parser = argparse.ArgumentParser(description="Register the ports of a specfied Docker container with Etcd")
+parser.add_argument("--host", help="The host the container will be registered under", required = True)
+parser.add_argument("--container", help="The container name or id", required = True)
+
+args = parser.parse_args()
+
+docker_client = docker.Client()
+etcd_client = etcd.Client(host="172.17.42.1")
+
+container_details = docker_client.inspect_container(args.container)
+port_bindings = container_details["HostConfig"]["PortBindings"]
+
+print("Registering host as {0}".format(args.host))
+etcd_client.write("/containers/{0}/host".format(args.container), args.host)
+
+for (k, v) in port_bindings.iteritems():
+  host_port = v[0]["HostPort"].replace("/tcp", "")
+  container_port = k.replace("/tcp", "")
+  print("Registering port {0} as mapped to {1}".format(k, host_port))
+  etcd_client.write("/containers/{0}/ports/{1}".format(args.container, container_port), host_port)
+
+def deregister_func(container):
+  def handler(*args, **kwargs):
+    print "Deregistering container {0}".format(container)
+    etcd_client.delete("/containers/{0}".format(container), recursive = True)
+    sys.exit(0)
+
+  return handler
+
+deregister = deregister_func(args.container)
+
+signal.signal(signal.SIGTERM, deregister)
+signal.signal(signal.SIGINT, deregister)
+
+while True:
+  time.sleep(5)
