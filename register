@@ -20,7 +20,7 @@ def update_container_details(details_already_exist):
   if container_details["State"]["Running"] == True:
     port_bindings = container_details["HostConfig"]["PortBindings"]
 
-    etcd_client.write("/containers/{0}".format(args.container), "", ttl = 10, dir = True, prevExist = details_already_exist)
+    etcd_client.write("/containers/{0}".format(args.container), "", ttl = 60, dir = True, prevExist = details_already_exist)
 
     for (k, v) in port_bindings.iteritems():
       host_port = v[0]["HostPort"].replace("/tcp", "")
@@ -50,4 +50,4 @@ details_already_exist = False
 
 while True:
   details_already_exist = update_container_details(details_already_exist)
-  time.sleep(5)
+  time.sleep(30)
