@@ -5,6 +5,7 @@ import argparse
 import signal
 import time
 import sys
+import logging
 
 parser = argparse.ArgumentParser(description="Register the ports of a specfied Docker container with Etcd")
 parser.add_argument("--container", help="The container name or id", required = True)
@@ -56,7 +57,10 @@ details_already_exist = False
 
 while True:
   try:
+    logging.info("registering container")
     details_already_exist = update_container_details(details_already_exist)
   except Exception as e:
+    logging.warning("registration failed")
+    logging.warning(e)
     details_already_exist = False
   time.sleep(30)
