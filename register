@@ -11,10 +11,15 @@ parser.add_argument("--container", help="The container name or id", required = T
 
 args = parser.parse_args()
 
-etcd_client = etcd.Client(host="172.17.42.1")
-docker_client = docker.Client()
+def new_etcd_client():
+    return etcd.Client(host="172.17.42.1")
+
+def new_docker_client():
+    return docker.Client()
 
 def update_container_details(details_already_exist):
+  etcd_client = new_etcd_client()
+  docker_client = new_docker_client()
   container_details = docker_client.inspect_container(args.container)
 
   if container_details["State"]["Running"] == True:
@@ -36,6 +41,7 @@ def update_container_details(details_already_exist):
 
 def deregister_func(container):
   def handler(*args, **kwargs):
+    etcd_client = new_etcd_client()
     etcd_client.delete("/containers/{0}".format(container), recursive = True)
     sys.exit(0)
 
@@ -49,5 +55,8 @@ signal.signal(signal.SIGINT, deregister)
 details_already_exist = False
 
 while True:
-  details_already_exist = update_container_details(details_already_exist)
+  try:
+    details_already_exist = update_container_details(details_already_exist)
+  except Exception as e:
+    details_already_exist = False
   time.sleep(30)
