@@ -18,15 +18,24 @@ def new_etcd_client():
 def new_docker_client():
     return docker.Client()
 
-def update_container_details(details_already_exist):
+def update_container_details():
   etcd_client = new_etcd_client()
   docker_client = new_docker_client()
   container_details = docker_client.inspect_container(args.container)
+  details_already_exist = False
 
   if container_details["State"]["Running"] == True:
+    key = "/containers/{0}".format(args.container)
+
+    try:
+      etcd_client.get(key)
+      details_already_exist = True
+    except:
+      details_already_exist = False
+
     port_bindings = container_details["HostConfig"]["PortBindings"]
 
-    etcd_client.write("/containers/{0}".format(args.container), "", ttl = 60, dir = True, prevExist = details_already_exist)
+    etcd_client.write(key, "", ttl = 60, dir = True, prevExist = details_already_exist)
 
     for (k, v) in port_bindings.iteritems():
       host_port = v[0]["HostPort"].replace("/tcp", "")
@@ -53,14 +62,11 @@ deregister = deregister_func(args.container)
 signal.signal(signal.SIGTERM, deregister)
 signal.signal(signal.SIGINT, deregister)
 
-details_already_exist = False
-
 while True:
   try:
     logging.info("registering container")
-    details_already_exist = update_container_details(details_already_exist)
+    update_container_details()
   except Exception as e:
     logging.warning("registration failed")
     logging.warning(e)
-    details_already_exist = False
   time.sleep(30)
