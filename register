@@ -38,12 +38,13 @@ def update_container_details():
     etcd_client.write(key, "", ttl = 60, dir = True, prevExist = details_already_exist)
 
     for (k, v) in port_bindings.iteritems():
-      host_port = v[0]["HostPort"].replace("/tcp", "")
-      host = v[0]["HostIp"]
-      container_port = k.replace("/tcp", "")
+      if v != None:
+        host_port = v[0]["HostPort"].replace("/tcp", "")
+        host = v[0]["HostIp"]
+        container_port = k.replace("/tcp", "")
 
-      etcd_client.write("/containers/{0}/ports/{1}/host/".format(args.container, container_port), host)
-      etcd_client.write("/containers/{0}/ports/{1}/port/".format(args.container, container_port), host_port)
+        etcd_client.write("/containers/{0}/ports/{1}/host/".format(args.container, container_port), host)
+        etcd_client.write("/containers/{0}/ports/{1}/port/".format(args.container, container_port), host_port)
 
     return True
   else:
