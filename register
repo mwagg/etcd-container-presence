@@ -12,8 +12,10 @@ parser.add_argument("--container", help="The container name or id", required = T
 
 args = parser.parse_args()
 
+docker_ip = "172.17.42.1"
+
 def new_etcd_client():
-    return etcd.Client(host="172.17.42.1")
+    return etcd.Client(host=docker_ip)
 
 def new_docker_client():
     return docker.Client()
@@ -41,6 +43,10 @@ def update_container_details():
       if v != None:
         host_port = v[0]["HostPort"].replace("/tcp", "")
         host = v[0]["HostIp"]
+        # if we are bound to all, we assume we can get it from the docker ip
+        if host == "0.0.0.0":
+          host = docker_ip
+
         container_port = k.replace("/tcp", "")
 
         etcd_client.write("/containers/{0}/ports/{1}/host/".format(args.container, container_port), host)
